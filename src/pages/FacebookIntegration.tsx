@@ -19,7 +19,8 @@ const FacebookIntegration: React.FC = () => {
     login, 
     logout, 
     isLoading, 
-    error 
+    error,
+    isFBInitialized
   } = useFacebookAuth();
 
   // Step tracking for the integration process
@@ -83,7 +84,11 @@ const FacebookIntegration: React.FC = () => {
             To get started, connect your Facebook account to allow HookTXT to access your Pages.
             We'll only request permissions needed to manage your Page conversations.
           </p>
-          <FacebookLoginButton onLogin={login} isLoading={isLoading} />
+          <FacebookLoginButton 
+            onLogin={login} 
+            isLoading={isLoading} 
+            isFacebookInitialized={isFBInitialized} 
+          />
         </div>
       )}
 

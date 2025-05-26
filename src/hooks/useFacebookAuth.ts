@@ -143,11 +143,9 @@ export const useFacebookAuth = () => {
 
   // Handle login with Facebook
   const login = useCallback(() => {
-    // If FB is not loaded or not initialized yet, retry after a delay
+    // Don't try to login if FB is not loaded or not initialized yet
     if (!window.FB || !isFBInitialized) {
-      console.warn('Facebook SDK not fully initialized, retrying in 500ms');
-      setIsLoading(true); // Show loading state while waiting
-      setTimeout(login, 500); // Retry after 500ms
+      setError('Facebook SDK not fully initialized. Please try again.');
       return;
     }
 
@@ -213,6 +211,7 @@ export const useFacebookAuth = () => {
     login,
     logout,
     isLoading,
-    error
+    error,
+    isFBInitialized
   };
 };
