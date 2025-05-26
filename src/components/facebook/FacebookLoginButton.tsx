@@ -3,18 +3,24 @@ import React from 'react';
 interface FacebookLoginButtonProps {
   onLogin: () => void;
   isLoading: boolean;
+  isFacebookInitialized?: boolean;
 }
 
 export const FacebookLoginButton: React.FC<FacebookLoginButtonProps> = ({ 
   onLogin, 
-  isLoading 
+  isLoading,
+  isFacebookInitialized = false
 }) => {
+  // Button should be disabled while loading OR when Facebook SDK is not initialized
+  const isDisabled = isLoading || !isFacebookInitialized;
+  
   return (
     <button
       onClick={onLogin}
-      disabled={isLoading}
+      disabled={isDisabled}
       className="flex items-center justify-center bg-[#1877F2] hover:bg-[#0b5ed7] transition-colors 
         text-white font-medium py-3 px-4 rounded-lg w-full sm:w-auto disabled:opacity-70"
+      title={!isFacebookInitialized ? "Waiting for Facebook SDK to initialize..." : undefined}
     >
       {isLoading ? (
         <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -26,7 +32,11 @@ export const FacebookLoginButton: React.FC<FacebookLoginButtonProps> = ({
           <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
         </svg>
       )}
-      <span>{isLoading ? 'Connecting...' : 'Connect with Facebook'}</span>
+      <span>
+        {isLoading ? 'Connecting...' : 
+         !isFacebookInitialized ? 'Initializing Facebook...' : 
+         'Connect with Facebook'}
+      </span>
     </button>
   );
 };

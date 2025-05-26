@@ -12,20 +12,24 @@ export const useFacebookAuth = () => {
   const [pages, setPages] = useState<FacebookPage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isFBInitialized, setIsFBInitialized] = useState(false);
+  const [fbSDKLoaded, setFbSDKLoaded] = useState(false);
 
   // Initialize Facebook SDK
   useEffect(() => {
     const initFacebookSDK = () => {
+      // If Facebook SDK is already available
       if (window.FB) {
-        window.FB.getLoginStatus(() => {
-          // Only set initialized after we confirm FB is working
+        setFbSDKLoaded(true);
+        // Verify it's actually working by making a test call
+        window.FB.getLoginStatus((response) => {
           setIsFBInitialized(true);
           checkLoginStatus();
         });
         return;
       }
 
-      window.fbAsyncInit = () => {
+      // Define async init function that will run when SDK is loaded
+      window.fbAsyncInit = function() {
         window.FB.init({
           appId: import.meta.env.VITE_FACEBOOK_APP_ID,
           cookie: true,
@@ -33,11 +37,14 @@ export const useFacebookAuth = () => {
           version: 'v18.0' // Use the latest version
         });
 
-        // Wait a moment to ensure FB is fully initialized
+        setFbSDKLoaded(true);
+        
+        // Ensure FB is fully initialized before allowing interactions
+        // Small delay to ensure all FB methods are available
         setTimeout(() => {
           setIsFBInitialized(true);
           checkLoginStatus();
-        }, 500);
+        }, 1000);
       };
 
       // Load the SDK asynchronously
@@ -52,11 +59,16 @@ export const useFacebookAuth = () => {
     };
 
     initFacebookSDK();
+    
+    // Clean up function
+    return () => {
+      // Clean up any FB event listeners if needed
+    };
   }, []);
 
   // Check if user is already logged in
   const checkLoginStatus = useCallback(() => {
-    if (!window.FB || !isFBInitialized) return;
+    if (!fbSDKLoaded || !window.FB || !isFBInitialized) return;
 
     setIsLoading(true);
     
@@ -79,7 +91,7 @@ export const useFacebookAuth = () => {
         setIsLoading(false);
       }
     });
-  }, [isFBInitialized]);
+  }, [fbSDKLoaded, isFBInitialized]);
 
   // Fetch user information
   const fetchUserInfo = async (token: string) => {
@@ -133,8 +145,8 @@ export const useFacebookAuth = () => {
 
   // Handle login with Facebook
   const login = useCallback(() => {
-    if (!isFBInitialized || !window.FB) {
-      setError('Facebook SDK not loaded or not initialized. Please wait a moment and try again.');
+    if (!fbSDKLoaded || !window.FB || !isFBInitialized) {
+      setError('Facebook SDK is not fully initialized. Please wait a moment and try again.');
       return;
     }
 
@@ -166,7 +178,7 @@ export const useFacebookAuth = () => {
     } catch (err) {
       handleError(err);
     }
-  }, [isFBInitialized]);
+  }, [fbSDKLoaded, isFBInitialized]);
 
   // Handle logout
   const logout = useCallback(() => {
@@ -193,6 +205,7 @@ export const useFacebookAuth = () => {
     login,
     logout,
     isLoading,
-    error
+    error,
+    isFBInitialized
   };
 };
