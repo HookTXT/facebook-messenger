@@ -31,7 +31,7 @@ export const useFacebookAuth = () => {
             appId: import.meta.env.VITE_FACEBOOK_APP_ID,
             cookie: true,
             xfbml: true,
-            version: 'v18.0' // Using a valid version format
+            version: 'v17.0' // Updated to a more stable version
           });
           
           console.log("Facebook SDK initialized successfully");
