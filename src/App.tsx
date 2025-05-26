@@ -3,7 +3,7 @@ import FacebookIntegration from './pages/FacebookIntegration';
 
 function App() {
   return (
-    <div className="fb-messenger-plugin">
+    <div className="min-h-screen bg-gray-100">
       <FacebookIntegration />
     </div>
   );
