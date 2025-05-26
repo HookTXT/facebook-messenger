@@ -122,7 +122,8 @@ export const useFacebookAuth = () => {
   // Handle login with Facebook
   const login = useCallback(() => {
     if (!window.FB) {
-      setError('Facebook SDK not loaded. Please refresh the page.');
+      console.warn('Facebook SDK not initialized yet, retrying...');
+      setTimeout(login, 500); // Retry after 500ms
       return;
     }
 
