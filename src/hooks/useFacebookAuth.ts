@@ -16,14 +16,6 @@ export const useFacebookAuth = () => {
   // Initialize Facebook SDK
   useEffect(() => {
     const initFacebookSDK = () => {
-      // If FB is already defined and initialized
-      if (window.FB) {
-        console.log("Facebook SDK already loaded");
-        setIsFBInitialized(true);
-        checkLoginStatus();
-        return;
-      }
-
       // Define async init function that will run when SDK is loaded
       window.fbAsyncInit = function() {
         try {
@@ -31,7 +23,7 @@ export const useFacebookAuth = () => {
             appId: import.meta.env.VITE_FACEBOOK_APP_ID,
             cookie: true,
             xfbml: true,
-            version: 'v19.0' // Updated to the latest stable version
+            version: 'v19.0' // Updated to a current stable version
           });
           
           console.log("Facebook SDK initialized successfully");
@@ -43,24 +35,19 @@ export const useFacebookAuth = () => {
         }
       };
 
-      // Check if script is already loaded but not initialized
-      if (document.getElementById('facebook-jssdk')) {
-        console.log("Facebook SDK script found but not initialized");
-        return;
+      // If FB is already loaded and initialized, trigger the init manually
+      if (window.FB) {
+        window.fbAsyncInit();
       }
-
-      console.log("Loading Facebook SDK script");
-      // If not already loaded, add the script
-      const script = document.createElement('script');
-      script.id = 'facebook-jssdk';
-      script.src = 'https://connect.facebook.net/en_US/sdk.js';
-      script.async = true;
-      script.defer = true;
-      script.crossOrigin = 'anonymous';
-      document.head.appendChild(script);
     };
 
-    initFacebookSDK();
+    // Wait for DOM to be fully loaded
+    if (document.readyState === 'complete') {
+      initFacebookSDK();
+    } else {
+      window.addEventListener('load', initFacebookSDK);
+      return () => window.removeEventListener('load', initFacebookSDK);
+    }
   }, []);
 
   // Check if user is already logged in
