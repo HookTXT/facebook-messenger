@@ -17,8 +17,11 @@ export const useFacebookAuth = () => {
   useEffect(() => {
     const initFacebookSDK = () => {
       if (window.FB) {
-        setIsFBInitialized(true);
-        checkLoginStatus();
+        window.FB.getLoginStatus(() => {
+          // Only set initialized after we confirm FB is working
+          setIsFBInitialized(true);
+          checkLoginStatus();
+        });
         return;
       }
 
@@ -30,8 +33,11 @@ export const useFacebookAuth = () => {
           version: 'v18.0' // Use the latest version
         });
 
-        setIsFBInitialized(true);
-        checkLoginStatus();
+        // Wait a moment to ensure FB is fully initialized
+        setTimeout(() => {
+          setIsFBInitialized(true);
+          checkLoginStatus();
+        }, 500);
       };
 
       // Load the SDK asynchronously
@@ -50,7 +56,7 @@ export const useFacebookAuth = () => {
 
   // Check if user is already logged in
   const checkLoginStatus = useCallback(() => {
-    if (!window.FB) return;
+    if (!window.FB || !isFBInitialized) return;
 
     setIsLoading(true);
     
@@ -73,7 +79,7 @@ export const useFacebookAuth = () => {
         setIsLoading(false);
       }
     });
-  }, []);
+  }, [isFBInitialized]);
 
   // Fetch user information
   const fetchUserInfo = async (token: string) => {
@@ -132,42 +138,46 @@ export const useFacebookAuth = () => {
       return;
     }
 
-    setIsLoading(true);
-    setError(null);
+    try {
+      setIsLoading(true);
+      setError(null);
 
-    window.FB.login((response) => {
-      if (response.authResponse) {
-        const token = response.authResponse.accessToken;
-        const userId = response.authResponse.userID;
-        
-        // Store the token securely
-        saveFacebookToken(userId, token, 'short_lived')
-          .then(() => fetchUserInfo(token))
-          .then(() => fetchPages(token))
-          .then(() => {
-            setIsLoggedIn(true);
-            setIsLoading(false);
-          })
-          .catch(handleError);
-      } else {
-        setError('Facebook login was cancelled or failed');
-        setIsLoading(false);
-      }
-    }, { 
-      scope: 'email,pages_show_list,pages_messaging,pages_manage_metadata'
-    });
+      window.FB.login((response) => {
+        if (response.authResponse) {
+          const token = response.authResponse.accessToken;
+          const userId = response.authResponse.userID;
+          
+          // Store the token securely
+          saveFacebookToken(userId, token, 'short_lived')
+            .then(() => fetchUserInfo(token))
+            .then(() => fetchPages(token))
+            .then(() => {
+              setIsLoggedIn(true);
+              setIsLoading(false);
+            })
+            .catch(handleError);
+        } else {
+          setError('Facebook login was cancelled or failed');
+          setIsLoading(false);
+        }
+      }, { 
+        scope: 'email,pages_show_list,pages_messaging,pages_manage_metadata'
+      });
+    } catch (err) {
+      handleError(err);
+    }
   }, [isFBInitialized]);
 
   // Handle logout
   const logout = useCallback(() => {
-    if (!window.FB) return;
+    if (!window.FB || !isFBInitialized) return;
 
     window.FB.logout(() => {
       setIsLoggedIn(false);
       setUserInfo(null);
       setPages([]);
     });
-  }, []);
+  }, [isFBInitialized]);
 
   // Handle errors
   const handleError = (error: any) => {
