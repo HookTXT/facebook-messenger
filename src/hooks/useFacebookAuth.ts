@@ -12,68 +12,70 @@ export const useFacebookAuth = () => {
   const [pages, setPages] = useState<FacebookPage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isFBInitialized, setIsFBInitialized] = useState(false);
-  const [fbSDKLoaded, setFbSDKLoaded] = useState(false);
 
   // Initialize Facebook SDK
   useEffect(() => {
     const initFacebookSDK = () => {
-      // If Facebook SDK is already available
+      // If FB is already defined and initialized
       if (window.FB) {
-        setFbSDKLoaded(true);
-        // Verify it's actually working by making a test call
-        window.FB.getLoginStatus((response) => {
-          setIsFBInitialized(true);
-          checkLoginStatus();
-        });
+        console.log("Facebook SDK already loaded");
+        setIsFBInitialized(true);
+        checkLoginStatus();
         return;
       }
 
       // Define async init function that will run when SDK is loaded
       window.fbAsyncInit = function() {
-        window.FB.init({
-          appId: import.meta.env.VITE_FACEBOOK_APP_ID,
-          cookie: true,
-          xfbml: true,
-          version: 'v18.0' // Use the latest version
-        });
-
-        setFbSDKLoaded(true);
-        
-        // Ensure FB is fully initialized before allowing interactions
-        // Small delay to ensure all FB methods are available
-        setTimeout(() => {
+        try {
+          window.FB.init({
+            appId: import.meta.env.VITE_FACEBOOK_APP_ID,
+            cookie: true,
+            xfbml: true,
+            version: 'v18.0' // Using a valid version format
+          });
+          
+          console.log("Facebook SDK initialized successfully");
           setIsFBInitialized(true);
           checkLoginStatus();
-        }, 1000);
+        } catch (error) {
+          console.error("Error initializing Facebook SDK:", error);
+          handleError(error);
+        }
       };
 
-      // Load the SDK asynchronously
-      (function(d, s, id) {
-        var js, fjs = d.getElementsByTagName(s)[0];
-        if (d.getElementById(id)) return;
-        js = d.createElement(s) as HTMLScriptElement;
-        js.id = id;
-        js.src = "https://connect.facebook.net/en_US/sdk.js";
-        fjs.parentNode?.insertBefore(js, fjs);
-      }(document, 'script', 'facebook-jssdk'));
+      // Check if script is already loaded but not initialized
+      if (document.getElementById('facebook-jssdk')) {
+        console.log("Facebook SDK script found but not initialized");
+        return;
+      }
+
+      console.log("Loading Facebook SDK script");
+      // If not already loaded, add the script
+      const script = document.createElement('script');
+      script.id = 'facebook-jssdk';
+      script.src = 'https://connect.facebook.net/en_US/sdk.js';
+      script.async = true;
+      script.defer = true;
+      script.crossOrigin = 'anonymous';
+      document.head.appendChild(script);
     };
 
     initFacebookSDK();
-    
-    // Clean up function
-    return () => {
-      // Clean up any FB event listeners if needed
-    };
   }, []);
 
   // Check if user is already logged in
   const checkLoginStatus = useCallback(() => {
-    if (!fbSDKLoaded || !window.FB || !isFBInitialized) return;
+    if (!window.FB || !isFBInitialized) {
+      console.log("FB not available for login status check");
+      return;
+    }
 
+    console.log("Checking login status");
     setIsLoading(true);
     
     window.FB.getLoginStatus((response) => {
       if (response.status === 'connected') {
+        console.log("User already connected:", response);
         const token = response.authResponse.accessToken;
         const userId = response.authResponse.userID;
         
@@ -87,15 +89,21 @@ export const useFacebookAuth = () => {
           })
           .catch(handleError);
       } else {
+        console.log("User not connected:", response.status);
         setIsLoggedIn(false);
         setIsLoading(false);
       }
     });
-  }, [fbSDKLoaded, isFBInitialized]);
+  }, [isFBInitialized]);
 
   // Fetch user information
   const fetchUserInfo = async (token: string) => {
     return new Promise<void>((resolve, reject) => {
+      if (!window.FB || !isFBInitialized) {
+        reject(new Error("Facebook SDK not initialized"));
+        return;
+      }
+
       window.FB.api(
         '/me',
         { fields: 'id,name,email,picture.type(large)' },
@@ -115,6 +123,11 @@ export const useFacebookAuth = () => {
   // Fetch user's Facebook pages
   const fetchPages = async (token: string) => {
     return new Promise<void>((resolve, reject) => {
+      if (!window.FB || !isFBInitialized) {
+        reject(new Error("Facebook SDK not initialized"));
+        return;
+      }
+
       window.FB.api(
         '/me/accounts',
         { 
@@ -145,16 +158,23 @@ export const useFacebookAuth = () => {
 
   // Handle login with Facebook
   const login = useCallback(() => {
-    if (!fbSDKLoaded || !window.FB || !isFBInitialized) {
-      setError('Facebook SDK is not fully initialized. Please wait a moment and try again.');
+    if (!window.FB) {
+      setError('Facebook SDK not loaded. Please refresh the page.');
+      return;
+    }
+
+    if (!isFBInitialized) {
+      setError('Facebook SDK is initializing. Please try again in a moment.');
       return;
     }
 
     try {
+      console.log("Attempting to log in with Facebook");
       setIsLoading(true);
       setError(null);
 
       window.FB.login((response) => {
+        console.log("Login response:", response);
         if (response.authResponse) {
           const token = response.authResponse.accessToken;
           const userId = response.authResponse.userID;
@@ -175,10 +195,11 @@ export const useFacebookAuth = () => {
       }, { 
         scope: 'email,pages_show_list,pages_messaging,pages_manage_metadata'
       });
-    } catch (err) {
-      handleError(err);
+    } catch (error) {
+      console.error("Error during login:", error);
+      handleError(error);
     }
-  }, [fbSDKLoaded, isFBInitialized]);
+  }, [isFBInitialized]);
 
   // Handle logout
   const logout = useCallback(() => {
